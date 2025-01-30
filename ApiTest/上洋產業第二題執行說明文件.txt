@@ -1,0 +1,151 @@
+### 第二題執行/說明文件
+
+---
+
+## **執行環境**
+
+請確保以下環境需求已正確安裝和配置：
+
+1. **作業系統**：Windows, macOS, 或 Linux。
+2. **開發工具**：
+   - **JDK**：17 或以上版本。
+   - **Maven**：3.8 或以上版本。
+   - **IDE**：建議使用 IntelliJ IDEA 或 Eclipse。
+3. **依賴庫**：
+   - **RestAssured**：5.3.0
+   - **JUnit**：5.11
+
+---
+
+## **目錄結構**
+
+專案的基本目錄結構如下：
+
+```plaintext
+PostmanApiTest/
+├── src/
+│   ├── test/
+│       └── java/
+│           └── com/upyoung/ApiTest/
+│               └── PostmanApiTest.java
+		 └── SubjectsApiTest.java
+│               └── RecentChangesApiTest.java
+├── pom.xml
+```
+
+---
+
+## **假設條件**
+
+1. **可訪問的 API 伺服器**：
+   測試依賴 `https://openlibrary.org` 提供的測試 API。請確保網路連線穩定，且可以訪問該 API。
+2. **資料返回行為**：
+   - **Subjects API**：
+     - 測試會根據 `GET /subjects/{subject}.json` 的請求，模擬資料返回正確主題數據或空數據的情境。
+   - **Recent Changes API**：
+     - 測試會基於 `GET /recentchanges/{date}.json`，驗證返回的近期變更資料，包含正確數據或空數據的模擬情境。
+
+3.在預期失敗的測試觸發 AssertionError（確保測試標記為失敗）標記為Failure
+   適用情境：
+
+   適用於 驗證 API 錯誤行為是否符合預期，並希望 CI/CD pipeline 偵測到這種異常。
+   用於 TDD（測試驅動開發），要求 API 在未來被修正為符合預期。
+   如果這個 API 的異常行為不應該被忽略，應該透過測試報告反映出來。
+
+
+---
+
+## **執行前提**
+
+1. **Maven 依賴配置**：
+   在專案根目錄的 `pom.xml` 檔案中，請確保以下依賴已正確配置：
+
+   ```xml
+   <dependencies>
+       <dependency>
+           <groupId>io.rest-assured</groupId>
+           <artifactId>rest-assured</artifactId>
+           <version>5.3.0</version>
+           <scope>test</scope>
+       </dependency>
+       <dependency>
+           <groupId>org.junit.jupiter</groupId>
+           <artifactId>junit-jupiter</artifactId>
+           <version>5.11.0</version>
+           <scope>test</scope>
+       </dependency>
+   </dependencies>
+   ```
+
+2. **測試資料**：
+   - **Subjects API**：
+     測試主題為 `java`，預期會返回包含書籍數據的結果。
+   - **Recent Changes API**：
+     測試日期為 `2020-01-01`，預期返回近期變更資料。
+
+3. **專案構建**：
+   - 確保專案能通過 Maven 正確構建：
+     ```bash
+     mvn clean install
+     ```
+
+4. **單元測試環境**：
+   測試程式使用 JUnit 5 框架，執行指令如下：
+   ```bash
+   mvn test
+   ```
+
+---
+
+## **執行方式**
+
+### 使用命令列運行
+
+1. **測試程式執行**：
+   在專案根目錄執行以下指令：
+   ```bash
+   mvn test
+   ```
+
+2. **測試結果檢查**：
+   測試結果會顯示於終端，包含以下資訊：
+   - 測試執行結果（成功或失敗）。
+   - 每個測試案例的執行時間。
+   - 具體的日誌輸出。
+
+   本例輸出：
+   ```plaintext
+   Test Subjects API success: [{"subject": "java", "works": [...]}]
+   print it status: 200
+   Subjects API 成功案例執行時間: 520 ms
+
+   Test Recent Changes API success: [{"id": 61002727, "kind": "add-cover", ...}]
+   print it status: 200
+   Recent Changes API 成功案例執行時間: 810 ms
+   ```
+
+---
+
+## **測試案例解釋**
+
+### **Subjects API 測試**
+1. **成功案例**：
+   - 測試主題為 `science`，預期返回包含相關書籍數據的結果。
+   - 驗證 HTTP 狀態碼為 `200`。
+   - 驗證返回的資料中 `works` 不為空。
+
+2. **失敗案例**：
+   - 模擬測試主題 `love`，預期返回資料中 `works` 為空為真的情境。
+   - 驗證測試失敗，並輸出詳細日誌。
+
+### **Recent Changes API 測試**
+1. **成功案例**：
+   - 測試日期為 `2020-01-01`，預期返回包含近期變更的非空資料。
+   - 驗證 HTTP 狀態碼為 `200`。
+   - 驗證返回的資料非空。
+
+2. **失敗案例**：
+   - 模擬測試日期 `2020-01-01`，返回空資料的情境。
+   - 驗證測試失敗，因為返回的資料並非空資料 並輸出詳細日誌。
+
+---

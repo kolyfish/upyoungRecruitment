@@ -1,0 +1,185 @@
+# 執行說明文件
+
+## 環境需求
+
+本專案的測試基於 Java 開發環境，請確保以下環境已安裝並正確配置：
+
+- **JDK**：17 
+- **Maven**：3.8 
+    org.apache.maven.archetypes 的 maven-archetype-quickstart (Version 1.5)
+- **依賴庫**：
+  - RestAssured：5.3.0
+  - JUnit：5.11
+
+
+## 專案目錄結構
+
+```
+PostmanApiTest/
+├── src/
+│   └── test/
+│       └── java/
+│           └── com/upyoung/ApiTest/
+│               └── PostmanApiTest.java
+│			     └── SubjectsApiTest.java
+│		         └── RecentChangesApiTest.java
+│
+├── pom.xml
+```
+
+
+###  使用 Maven 執行測試
+
+在專案根目錄執行以下指令，運行測試：
+
+```bash
+mvn test
+```
+
+###  檢查測試結果
+
+測試結果會顯示在終端中，並包含以下資訊：
+
+- 成功或失敗的測試案例數量
+- 每個測試的執行時間
+- 詳細的日誌輸出，包括請求 URL、回應碼及驗證結果
+
+本例輸出：
+
+```
+GET Success Test Execution Time: 5103 ms
+預期成功GET請求狀態碼:200
+預期成功POST請求狀態碼:200
+POST Form Data Test Execution Time: 2640 ms
+預期失敗GET請求狀態碼: 404 此刻的路徑: https://postman-echo.com/nonexistent 測試為失敗因為路徑結尾為 /nonexistent
+GET Failure Test Execution Time: 1528 ms
+預期失敗POST請求狀態碼:200
+預期失敗，Postman echo伺服器返回成功狀態碼，但文件內容不包含correct 驗證失敗 實際內容: wrong
+```
+
+
+## 測試前提
+
+1. **Postman Echo API 可正常訪問**：
+   測試依賴 `https://postman-echo.com` 提供的 API，請確保網路能夠訪問該服務。
+
+2. **臨時文件創建權限**：
+   測試需要在本地創建臨時文件，請確認運行環境對操作系統的臨時目錄擁有讀寫權限。
+
+3. **測試數據**：
+
+   - `GET /get` 測試會發送查詢參數 `param1=value1`，並驗證伺服器回應。
+   - `GET /nonexistent` 測試會發送到不存在的路徑，驗證返回 `404` 狀態碼。
+   - `POST /post` 測試包含以下數據：
+     - 文本字段：`name=John` 和 `job=Tester`
+     - 文件字段：包含 `correct` 或 `wrong` 字樣的臨時文件。
+
+3.在預期失敗的測試觸發 AssertionError（確保測試標記為失敗）標記為Failure
+   
+   適用情境：
+   適用於 驗證 API 錯誤行為是否符合預期，並希望 CI/CD pipeline 偵測到這種異常。
+   用於 TDD（測試驅動開發），要求 API 在未來被修正為符合預期。
+   如果這個 API 的異常行為不應該被忽略，應該透過測試報告反映出來。
+
+
+## 測試目標
+
+### GET 測試
+
+1. **GET成功案例**：
+
+   - 發送 `/get` 請求，攜帶參數 `param1=value1`。
+   - 驗證回應狀態碼為 `200`，並檢查回應中參數是否匹配。
+
+   **驗證邏輯**：
+   - 如果伺服器返回的狀態碼為 `200`，但查詢參數驗證失敗，測試應標記為失敗。
+   - 範例輸出：
+     ```
+     GET Success Test Execution Time: 5103 ms
+     預期成功GET請求狀態碼:200
+     ```
+
+2. **GET失敗案例**：
+
+   - 發送 `/nonexistent` 請求。
+   - 驗證回應狀態碼為 `404`。
+   - 使用條件狀態碼為 `404`觸發Assertions.fail，產生AssertionFailError 
+
+   **驗證邏輯**：
+   - 在打印日誌時，明確顯示請求的完整 URL 和預期狀態碼。
+   - 範例輸出：
+     ```
+     預期失敗GET請求狀態碼: 404 此刻的路徑: https://postman-echo.com/nonexistent 測試為失敗因為路徑結尾為 /nonexistent
+     GET Failure Test Execution Time: 1528 ms
+     ```
+
+### POST 測試
+   Form-data :
+   form-data通常使用上傳文件或圖片，因此我使用 multiPart 方法。
+    
+   RestAssured.given().multiPart() 
+	
+   適合用於處理 multipart/form-data 的方法。
+   每個 multiPart 方法呼叫會添加一個字段，支援文本字段和文件字段。
+   加入文件字段（如需要）：
+    
+   我設計了文件上傳，使用：
+   File testFile = createTestFile("wrong");
+   multiPart("file", new File("path/to/your/file.txt"))
+
+正確的內容類型：
+    multiPart 方法會自動設置 Content-Type 為 multipart/form-data，不需要手動指定。
+
+調整驗證部分：
+    驗證伺服器返回的數據是否正確，此次寫法為 上傳文件內文是否包含特定文字。
+
+
+3. **POST成功案例**：
+
+   - 發送 `/post` 請求，multiPart包含正確的 `form-data` 和文件（文件內容包含 `correct`）。
+   - 驗證回應狀態碼為 `200`，並檢查回應中字段和文件內容是否匹配。
+
+   **驗證邏輯**：
+   - 檢查回應內容是否正確包含上傳的字段和文件內容。
+   - 本例輸出：
+     ```
+     POST Form Data Test Execution Time: 2640 ms
+     預期成功POST請求狀態碼:200
+     ```
+
+4. **POST失敗案例**：
+
+   - 發送 `/post` 請求，multiPart包含不正確的文件（文件內容為 `wrong`）。
+   - 驗證即使回應狀態碼為 `200`，文件內容不正確應標記為失敗。
+   - 假如條件文件內容不正確，配合指令Assertions.fail，達成AssertionFailError。 
+
+
+   **驗證邏輯**：
+   - 如果文件內容驗證失敗，測試應直接標記為失敗。
+   - 本例輸出：
+     ```
+     POST Form Data Test Execution Time: 2640 ms
+     預期失敗POST請求狀態碼:200
+     預期失敗，Postman echo伺服器返回成功狀態碼，但文件內容不包含correct 驗證失敗 實際內容: wrong
+     ```
+
+## 第一題結論:
+
+### 預期成功測試
+
+```
+GET Success Test Execution Time: 5103 ms
+預期成功GET請求狀態碼:200
+POST Form Data Test Execution Time: 2640 ms
+預期成功POST請求狀態碼:200
+```
+
+### 預期失敗測試
+
+```
+預期失敗GET請求狀態碼: 404 此刻的路徑: https://postman-echo.com/nonexistent 測試為失敗因為路徑結尾為 /nonexistent
+GET Failure Test Execution Time: 1528 ms
+預期失敗POST請求狀態碼:200
+預期失敗，Postman echo伺服器返回成功狀態碼，但文件內容不包含correct 驗證失敗 實際內容: wrong
+```
+
